@@ -134,6 +134,13 @@ T = {
     }
 }[lang]
 
+# --- LIEN VERS LE README & DOI ---
+st.sidebar.markdown(f"**[{T['readme_link']}](https://github.com/OliManzoni/Manzoni_Chavis_Lab_spontI/blob/main/README.md)**")
+st.sidebar.markdown(f"### {T['cite_header']}")
+st.sidebar.markdown("[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19920541.svg)](https://doi.org/10.5281/zenodo.19920541)")
+st.sidebar.caption(f"{T['cite_text']}\n*Manzoni, O. J. (2026). Manzoni_Chavis_Lab_spontI. Zenodo. https://doi.org/10.5281/zenodo.19920541*")
+st.sidebar.divider()
+
 # --- EN-TÊTE INSTITUTIONNEL ---
 col_l, col_r = st.columns([2, 5]) 
 with col_l:
