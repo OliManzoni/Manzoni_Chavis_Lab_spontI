@@ -25,7 +25,7 @@ if 'x_end' not in st.session_state:
 # --- FONCTIONS DE NAVIGATION (Callbacks) ---
 def scroll_left():
     window = st.session_state.x_end - st.session_state.x_start
-    shift = window * 0.8 # Décalage de 80% de la fenêtre (laisse un chevauchement)
+    shift = window * 0.8
     new_start = max(0.0, st.session_state.x_start - shift)
     st.session_state.x_end = new_start + window
     st.session_state.x_start = new_start
@@ -44,15 +44,19 @@ T = {
         "title": "# Expert Electrophysiology Pipeline",
         "sb_preproc": "1. Preprocessing & Polarity",
         "polarity": "Signal Polarity",
-        "pol_out": "Outward (Positive)",
-        "pol_in": "Inward (Negative)",
+        "pol_out": "Outward (Positive, e.g. IPSC at 0mV)",
+        "pol_in": "Inward (Negative, e.g. EPSC or IPSC high Cl-)",
         "baseline_method": "Baseline Mode",
         "dyn_detrend": "Dynamic Detrending (Median)",
         "stat_detrend": "Static Global Median",
         "cutoff": "Bessel Cutoff (Hz)",
         "sb_detec": "2. Detection Threshold",
         "threshold": "Z-Score Threshold",
-        "sb_viz": "3. Visualization & Navigation",
+        "sb_kinetics": "3. Kinetics Filters",
+        "decay_thresh": "Max Decay (ms)",
+        "rise_thresh": "Max Rise Time (ms)",
+        "amp_filter": "Min Amplitude Filter (pA)",
+        "sb_viz": "4. Visualization & Navigation",
         "zoom_y": "Zoom Y (pA)",
         "x_start": "Start (s)",
         "x_end": "End (s)",
@@ -65,15 +69,19 @@ T = {
         "title": "# Pipeline Expert Électrophysiologie",
         "sb_preproc": "1. Prétraitement & Polarité",
         "polarity": "Polarité du Signal",
-        "pol_out": "Sortant (Positif)",
-        "pol_in": "Entrant (Négatif)",
+        "pol_out": "Sortant (Positif, ex: IPSC à 0mV)",
+        "pol_in": "Entrant (Négatif, ex: EPSC ou IPSC haut Cl-)",
         "baseline_method": "Mode de Ligne de Base",
         "dyn_detrend": "Detrending Dynamique (Médiane)",
         "stat_detrend": "Médiane Globale Statique",
         "cutoff": "Coupure Bessel (Hz)",
         "sb_detec": "2. Seuil de Détection",
         "threshold": "Seuil Z-Score",
-        "sb_viz": "3. Visualisation & Navigation",
+        "sb_kinetics": "3. Filtres Cinétiques",
+        "decay_thresh": "Decay Max (ms)",
+        "rise_thresh": "Rise Time Max (ms)",
+        "amp_filter": "Filtre Amplitude Min (pA)",
+        "sb_viz": "4. Visualisation & Navigation",
         "zoom_y": "Zoom Y (pA)",
         "x_start": "Début (s)",
         "x_end": "Fin (s)",
@@ -89,7 +97,7 @@ st.divider()
 
 # --- SIDEBAR ---
 st.sidebar.header(T["sb_preproc"])
-polarity = st.sidebar.radio(T["polarity"], [T["pol_out"], T["pol_in"]])
+polarity = st.sidebar.radio(T["polarity"], [T["pol_out"], T["pol_in"]], index=1)
 is_outward = (polarity == T["pol_out"])
 baseline_mode = st.sidebar.radio(T["baseline_method"], [T["dyn_detrend"], T["stat_detrend"]], index=0)
 use_bessel = st.sidebar.checkbox("Bessel Filter", value=True)
@@ -98,8 +106,19 @@ cutoff = st.sidebar.slider(T["cutoff"], 100, int(st.session_state.fs_nyquist), 2
 st.sidebar.header(T["sb_detec"])
 threshold = st.sidebar.slider(T["threshold"], 1.0, 8.0, 2.5)
 
+st.sidebar.header(T["sb_kinetics"])
+use_amp_filter = st.sidebar.checkbox(T["amp_filter"], value=True)
+amp_limit = st.sidebar.number_input("Amplitude Min (pA)", value=5.0 if is_outward else 7.0, step=1.0)
+
+use_decay_filter = st.sidebar.checkbox("Filter Decay", value=True)
+decay_limit = st.sidebar.number_input(T["decay_thresh"], value=50.0 if is_outward else 4.0, step=1.0)
+
+use_rise_filter = st.sidebar.checkbox("Filter Rise Time", value=True)
+rise_limit = st.sidebar.number_input(T["rise_thresh"], value=5.0 if is_outward else 1.5, step=0.1)
+
 st.sidebar.header(T["sb_viz"])
-y_zoom = st.sidebar.slider(T["zoom_y"], -400, 400, (-80, 50))
+y_default = (-50, 200) if is_outward else (-200, 50)
+y_zoom = st.sidebar.slider(T["zoom_y"], -400, 400, y_default)
 
 auto_z = st.sidebar.checkbox(T["auto_z"], value=True)
 
@@ -110,15 +129,25 @@ col_b1.button(T["btn_left"], on_click=scroll_left, use_container_width=True)
 col_b2.button(T["btn_right"], on_click=scroll_right, use_container_width=True)
 
 col_x1, col_x2 = st.sidebar.columns(2)
-# On lie les widgets directement aux variables de la session via le paramètre "key"
 col_x1.number_input(T["x_start"], step=0.1, key="x_start")
 col_x2.number_input(T["x_end"], step=0.1, key="x_end")
 
-# Protection mathématique si l'utilisateur inverse début et fin
 if st.session_state.x_start >= st.session_state.x_end:
     st.sidebar.error("Le début doit être inférieur à la fin.")
 x_zoom = (st.session_state.x_start, st.session_state.x_end)
 
+def calculate_rise_time_expert(segment_y, dt):
+    try:
+        peak_idx = np.argmax(segment_y)
+        if peak_idx < 3: return 0
+        rising_limb = segment_y[:peak_idx + 1]
+        t_vec = np.arange(len(rising_limb)) * dt
+        peak_val = rising_limb[-1]
+        y10, y90 = 0.10 * peak_val, 0.90 * peak_val
+        t10 = np.interp(y10, rising_limb, t_vec)
+        t90 = np.interp(y90, rising_limb, t_vec)
+        return t90 - t10
+    except: return 0
 
 # --- ANALYSE ---
 file = st.file_uploader("Charger .abf", type=["abf"])
@@ -148,11 +177,12 @@ if file:
             b, a = signal.bessel(4, cutoff/nyq, btype='low', analog=False)
             f_data = signal.filtfilt(b, a, raw_data)
 
-        # Détection (Template Matching)
+        # Détection
         detect_trace = f_data if is_outward else -f_data
         
         best_corr = np.zeros_like(detect_trace)
-        # Adapté pour AMPA/GABA selon la polarité choisie
+        
+        # NOTE: On garde la logique de détection qui marche bien (0.5ms rise_time pour le template de base)
         decays = [10.0, 20.0, 30.0, 50.0] if is_outward else [2.0, 5.0, 10.0, 15.0]
         
         for d in decays:
@@ -163,6 +193,35 @@ if file:
             
         corr_z = (best_corr - np.mean(best_corr)) / np.std(best_corr)
         peaks, _ = signal.find_peaks(corr_z, height=threshold, distance=int(0.005 * fs))
+        
+        valid_ev = []
+        k_trace = f_data
+        
+        for i, p in enumerate(peaks):
+            start, end = p - int(0.005*fs), p + int(0.030*fs)
+            if start < 0 or end >= len(k_trace): continue
+            
+            l_base = np.mean(k_trace[p-int(0.005*fs):p-int(0.002*fs)])
+            
+            if is_outward:
+                seg = k_trace[start:end] - l_base
+            else:
+                seg = -(k_trace[start:end] - l_base)
+            
+            amp = np.max(seg)
+            rise_1090 = calculate_rise_time_expert(seg, dt)
+            area = integrate.trapezoid(seg, dx=dt)
+            
+            estimated_decay = abs(area / amp) if amp > 0 else 0
+            
+            pass_amp = (not use_amp_filter or amp >= amp_limit)
+            pass_decay = (not use_decay_filter or estimated_decay <= decay_limit)
+            pass_rise = (not use_rise_filter or rise_1090 <= rise_limit)
+            
+            if pass_amp and pass_decay and pass_rise:
+                ev = {'idx': p, 'time': times[p], 'amp': amp, 'rise': rise_1090, 'area': abs(area), 'decay': estimated_decay}
+                ev['iei'] = (times[p] - times[peaks[i-1]])*1000 if i>0 else np.nan
+                valid_ev.append(ev)
 
         # --- PLOTTING ---
         st.subheader(T["viz_header"])
@@ -170,10 +229,8 @@ if file:
         
         ax1.plot(times, f_data, color='black', lw=0.5)
         
-        # Affichage des événements validés (simplifié pour la visualisation rapide)
-        # Dans un pipeline complet, on garde la boucle de filtrage cinétique ici.
-        if len(peaks) > 0:
-            ax1.plot(times[peaks], f_data[peaks], 'o', color='purple' if is_outward else '#FF8C00', markersize=4)
+        if valid_ev:
+            ax1.plot([e['time'] for e in valid_ev], [f_data[e['idx']] for e in valid_ev], 'o', color='purple' if is_outward else '#FF8C00', markersize=5)
 
         ax1.set_ylim(y_zoom)
         ax1.set_xlim(x_zoom)
@@ -183,7 +240,6 @@ if file:
         ax2.axhline(threshold, color='red', ls='--')
         ax2.set_ylabel("Z-Score")
         
-        # LOGIQUE D'AUTO-AJUSTEMENT DE L'AXE Z-SCORE
         if auto_z:
             mask = (times >= st.session_state.x_start) & (times <= st.session_state.x_end)
             if np.any(mask):
@@ -193,6 +249,18 @@ if file:
                 ax2.set_ylim(z_min - margin, z_max + margin)
 
         st.pyplot(fig)
+        
+        # --- EXPORT ---
+        if valid_ev:
+            df = pd.DataFrame(valid_ev)
+            st.divider()
+            
+            freq_hz = len(df) / times[-1]
+            st.subheader(f"Total Events: {len(valid_ev)} | Freq: {freq_hz:.2f} Hz")
+            
+            col_exp1, col_exp2 = st.columns(2)
+            df_export = df[['time', 'amp', 'rise', 'decay', 'area', 'iei']].copy()
+            col_exp1.download_button(label="📁 Download Events (CSV)", data=df_export.to_csv(index=False).encode('utf-8'), file_name='events.csv', mime='text/csv')
 
     except Exception as e: st.error(f"Error: {e}")
     finally:
