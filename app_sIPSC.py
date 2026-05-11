@@ -55,7 +55,7 @@ T = {
         "sb_kinetics": "3. Kinetics Filters",
         "decay_thresh": "Max Decay (ms)",
         "rise_thresh": "Max Rise Time (ms)",
-        "amp_filter": "Min Amplitude Filter (pA)",
+        "amp_filter": "Min Absolute Amplitude (pA)",
         "sb_viz": "4. Visualization & Navigation",
         "zoom_y": "Zoom Y (pA)",
         "x_start": "Start (s)",
@@ -80,7 +80,7 @@ T = {
         "sb_kinetics": "3. Filtres Cinétiques",
         "decay_thresh": "Decay Max (ms)",
         "rise_thresh": "Rise Time Max (ms)",
-        "amp_filter": "Filtre Amplitude Min (pA)",
+        "amp_filter": "Amplitude Absolue Min (pA)",
         "sb_viz": "4. Visualisation & Navigation",
         "zoom_y": "Zoom Y (pA)",
         "x_start": "Début (s)",
@@ -107,8 +107,9 @@ st.sidebar.header(T["sb_detec"])
 threshold = st.sidebar.slider(T["threshold"], 1.0, 8.0, 2.5)
 
 st.sidebar.header(T["sb_kinetics"])
-use_amp_filter = st.sidebar.checkbox(T["amp_filter"], value=True)
-amp_limit = st.sidebar.number_input("Amplitude Min (pA)", value=5.0 if is_outward else 7.0, step=1.0)
+use_amp_filter = st.sidebar.checkbox("Filter Amplitude", value=True)
+# CORRECTION ICI : min_value=0.0 et libellé "Amplitude Absolue"
+amp_limit = st.sidebar.number_input(T["amp_filter"], min_value=0.0, value=5.0 if is_outward else 7.0, step=1.0)
 
 use_decay_filter = st.sidebar.checkbox("Filter Decay", value=True)
 decay_limit = st.sidebar.number_input(T["decay_thresh"], value=50.0 if is_outward else 4.0, step=1.0)
@@ -181,8 +182,6 @@ if file:
         detect_trace = f_data if is_outward else -f_data
         
         best_corr = np.zeros_like(detect_trace)
-        
-        # NOTE: On garde la logique de détection qui marche bien (0.5ms rise_time pour le template de base)
         decays = [10.0, 20.0, 30.0, 50.0] if is_outward else [2.0, 5.0, 10.0, 15.0]
         
         for d in decays:
@@ -214,6 +213,7 @@ if file:
             
             estimated_decay = abs(area / amp) if amp > 0 else 0
             
+            # Utilisation de la nouvelle limite absolue
             pass_amp = (not use_amp_filter or amp >= amp_limit)
             pass_decay = (not use_decay_filter or estimated_decay <= decay_limit)
             pass_rise = (not use_rise_filter or rise_1090 <= rise_limit)
