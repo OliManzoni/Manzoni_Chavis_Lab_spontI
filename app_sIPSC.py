@@ -12,7 +12,7 @@ except ImportError:
     st.error("Le module pyabf n'est pas installé. Exécutez : pip install pyabf")
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="sEPSC/sIPSC Pipeline", layout="wide")
+st.set_page_config(page_title="sIPSC Pipeline", layout="wide")
 
 # Initialisation de la mémoire (Session State) pour la navigation temporelle
 if 'fs_nyquist' not in st.session_state:
