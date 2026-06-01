@@ -1,88 +1,109 @@
-# 🔬 Expert sIPSC Pipeline: Inhibition & Kinetic Analysis
-### *Manzoni & Chavis Labs | Synaptic Plasticity & Biophysics*
+🟣 Expert sIPSC Pipeline: Iterative Template Matching & GABAergic Kinetics
+Manzoni & Chavis Labs | Synaptic Plasticity & Biophysics
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19915016.svg)](https://doi.org/10.5281/zenodo.19915016)
+(Le README en français se trouve dans la seconde moitié de ce document / The French README is located in the second half of this document).
 
-*(Le README en français se trouve dans la seconde moitié de ce document / The French README is located in the second half of this document).*
+👉 Online Access: https://manzonilab-sipsc.streamlit.app/ (Update with your actual link)
+🇬🇧 ENGLISH VERSION
+1. Scientific Introduction
 
-👉 **Online Access: [https://manzonilab-sipsc.streamlit.app/](https://manzonilab-sipsc.streamlit.app/)** *(Update with your actual link)*
+The analysis of spontaneous inhibitory post-synaptic currents (sIPSCs) is fundamental to deciphering the GABAergic tone and the excitation/inhibition balance in neural networks (e.g., in FXS or Reeler models).
 
----
+However, classic threshold-based detection methods suffer from stochastic electrical noise and operator bias, threatening reproducibility. This Streamlit application acts as an expert workstation using an advanced Iterative Template Matching algorithm. It creates a noise-free, cell-specific fingerprint to detect GABA$_A$ events even when buried in noise, and mathematically extracts the exact synaptic charge.
+2. Key Features
 
-## 🇬🇧 ENGLISH VERSION
+    Adaptive Polarity (Inward/Outward): Automatically adapts to the chloride driving force (Vm​−ECl​), whether you record outward currents (e.g., at 0 mV) or inward currents (e.g., at −70 mV with high intracellular chloride).
 
-### 1. Scientific Introduction
-The analysis of spontaneous inhibitory post-synaptic currents (**sIPSCs**) is crucial for understanding the GABAergic tone and the excitation/inhibition balance in neural networks. 
+    Tier 1 (Fingerprint Generation): Scans the trace with multiple long-decay templates (5,10,20,30 ms) to capture the slower kinetics of GABA$_A$ receptors. The highest signal-to-noise ratio events are biologically aligned (Biological Snapping) and averaged to build a perfect, noise-free cell fingerprint.
 
-This Streamlit application is a dedicated workstation for extracting GABA$_A$ receptor-mediated events. Unlike glutamatergic currents, GABAergic currents require specific handling of polarity (depending on the driving force $V_m - E_{Cl}$) and exhibit slower decay kinetics. This pipeline automates denoising, template-matching detection, and precise kinetic calculations from raw electrophysiological data files (`.abf`).
+    Tier 2 (Iterative Detection & Scaling): The fingerprint slides across the trace using a robust Z-Score. Detected events are analyzed via Least Squares Scaling, isolating the true quantal amplitude from background noise.
 
-### 2. Key Features
-* **Patch Configuration (Polarity Aware)**: Automatically handles both **Outward** currents (e.g., recorded at $0$ mV to isolate inhibition) and **Inward** currents (e.g., recorded at $-70$ mV with high intracellular chloride).
-* **GABA-Specific Multi-Template Detection**: Scans traces using an optimized $0.2$ ms rise-time baseline coupled with varying decay time constant templates ($5, 10, 15,$ and $25$ ms) to capture dendritic variability.
-* **Bessel Filtering (4th Order)**: Preserves the ultra-fast rising phase of the sIPSC by ensuring a maximally flat group delay, avoiding artifactual ringing.
-* **10-90% Kinetic Measurement**: Precisely calculates the rise time via linear interpolation, bypassing the limits of the sampling frequency.
-* **Dual Export System**: Generates an "Events" file (individual sIPSCs with their specific IEI, Area, Rise, and Decay) and a comprehensive "Population" visualization dashboard.
+    Dendritic Filtering Analysis: Calculates the 10-90% Rise Time via linear interpolation to estimate synaptic location and dendritic signal attenuation.
 
-### 3. Algorithms and Mathematics
+    Dual Export System: Exports raw events (Tier 1) and iteratively scaled events (Tier 2) with frequency, amplitude, and synaptic charge, directly formatted for high-impact statistical analysis.
 
-#### Decay Estimation via Charge Integration
-Performing non-linear curve fitting on hundreds of noisy, spontaneous GABAergic events often fails due to overlapping currents. Instead, this pipeline uses a robust mathematical approximation based on total charge. Assuming a simple exponential decay for a GABA$_A$ current:
-$$ I(t) = I_{max} e^{-t/\tau} $$
-The total charge (Area) is calculated using the trapezoidal rule:
-$$ Area = \int_{0}^{\infty} I_{max} e^{-t/\tau} dt = I_{max} \cdot \tau $$
-Therefore, the decay constant $\tau$ is rapidly and robustly estimated without curve-fitting:
-$$ \tau \approx \frac{Area}{Amplitude} $$
+3. Algorithms and Mathematics
+Least Squares Amplitude Scaling & Synaptic Charge
 
-### 4. User Guide
-1. **Load Data**: Upload your `.abf` file.
-2. **Set Polarity**: Select "Outward (> 0 pA)" or "Inward (< 0 pA)" based on your patch-clamp configuration.
-3. **Thresholding**: Adjust the Z-Score (typically $2.5$ to $3.5$) and the Amplitude filter ($> 7$ pA) to distinguish true events from background noise.
-4. **Visual Inspection**: Use the interactive graph to verify detections (green dots) and check the cross-correlation trace (blue trace).
-5. **Export**: Download your data as `.csv` for further statistical analysis.
+Instead of reading the raw peak height—which is highly vulnerable to patch-clamp stochastic noise—the algorithm scales the perfect cellular fingerprint (Template) to optimally fit each localized event.
 
-### 5. Citation
-If you use this software in your research, please cite it as follows:
+The scaling factor (s) is calculated using the dot product (Least Squares approximation):
+s=∑(Template2)∑(Signal×Template)​
 
-> **Manzoni, O. J. (2026). Manzoni_Chavis_Lab_sIPSC. Zenodo. https://doi.org/10.5281/zenodo.19915016**
+This factor s becomes the true Scaled Amplitude.
+Because the Template's area is perfectly defined, the Synaptic Charge (Area under the curve, reflecting the exact number of opened GABA$A$ receptors) is robustly computed as:
+$$Charge{scaled} = s \times \int_{0}^{\infty} Template(t) dt$$
+4. User Guide
 
----
-<br><br>
+    Upload Data: Load your .abf file.
 
-## 🇫🇷 VERSION FRANÇAISE
+    Preprocessing: Select the Signal Polarity ("Inward" or "Outward").
 
-### 1. Introduction Scientifique
-L'analyse des courants post-synaptiques inhibiteurs spontanés (**sIPSC**) est fondamentale pour comprendre le tonus GABAergique et la balance excitation/inhibition au sein des réseaux neuronaux.
+    Thresholding (Z-Score): Adjust the robust Z-Score (typically 2.5 to 4.0) to define the strictness of the detection.
 
-Cette application Streamlit est une station de travail dédiée à l'extraction des événements médiés par les récepteurs GABA$_A$. Contrairement aux courants glutamatergiques, les courants GABAergiques nécessitent une gestion spécifique de la polarité (selon la force électromotrice $V_m - E_{Cl}$) et présentent des cinétiques de désactivation plus lentes. Ce pipeline automatise le débruitage, la détection par modèles (template-matching) et les calculs cinétiques précis à partir de fichiers bruts (`.abf`).
+    Kinetics Limits: Apply absolute amplitude or rise-time filters to exclude artifacts.
 
-### 2. Fonctionnalités Principales
-* **Configuration Patch (Gestion de la Polarité)** : Gère automatiquement les courants **Sortants** (Outward, ex: enregistrement à $0$ mV) et **Entrants** (Inward, ex: enregistrement à $-70$ mV avec une solution riche en chlorure).
-* **Détection Multi-Modèles GABA** : Scanne les traces en utilisant une base optimisée avec un temps de montée de $0.2$ ms, couplée à des modèles de décroissance variables ($5, 10, 15,$ et $25$ ms) pour capturer la variabilité dendritique.
-* **Filtre de Bessel (4ème Ordre)** : Préserve la phase montante ultra-rapide du sIPSC en appliquant un délai de groupe maximalement plat, évitant ainsi les oscillations artificielles.
-* **Mesure Cinétique 10-90%** : Calcule précisément le temps de montée par interpolation linéaire, s'affranchissant des limites de la fréquence d'échantillonnage.
-* **Double Export** : Génère un fichier d'événements individuels (avec IEI, Aire, Rise et Decay) et un tableau de bord visuel de la population.
+    Visual Inspection: Review the two-pass graphs. The right panel displays the perfect cell fingerprint (Tier 1), while the left panel overlays the Tier 2 scaled detections.
 
-### 3. Algorithmes et Mathématiques
+    Export: Download the .csv files containing all metric distributions and scaled events.
 
-#### Estimation du Decay par Intégration de la Charge
-L'ajustement de courbe non-linéaire sur des événements GABAergiques spontanés échoue souvent à cause du chevauchement et du bruit de fond. Ce pipeline utilise une approximation mathématique robuste basée sur la charge totale. En supposant une décroissance exponentielle simple pour un courant GABA$_A$ :
-$$ I(t) = I_{max} e^{-t/\tau} $$
-La charge totale (Aire) est calculée via la méthode des trapèzes :
-$$ Aire = \int_{0}^{\infty} I_{max} e^{-t/\tau} dt = I_{max} \cdot \tau $$
-La constante de temps $\tau$ est donc estimée de manière robuste et rapide sans *curve-fitting* :
-$$ \tau \approx \frac{Aire}{Amplitude} $$
+5. Citation
 
-### 4. Guide d'Utilisation
-1. **Chargement** : Uploadez votre fichier `.abf`.
-2. **Polarité** : Sélectionnez "Sortant / Outward" ou "Entrant / Inward" selon votre configuration de patch-clamp.
-3. **Seuils** : Ajustez le Z-Score (typiquement entre $2.5$ et $3.5$) et le filtre d'Amplitude ($> 7$ pA) pour distinguer les vrais événements du bruit de fond.
-4. **Inspection Visuelle** : Utilisez le graphique interactif pour vérifier les détections (points verts) et la trace de corrélation croisée (trace bleue).
-5. **Exportation** : Téléchargez vos données au format `.csv` pour vos analyses statistiques.
+If you use this software or its mathematical architecture in your research, please include the following citation and DOI:
 
-### 5. Installation Locale
-Pour les chercheurs souhaitant modifier le code source localement :
+    Manzoni Lab (2026). Expert Pipeline: sIPSC Iterative Template Matching.
+    DOI: 10.5281/zenodo.19920540
+    GitHub: github.com/OliManzoni/Manzoni_Chavis_Lab_Ephys_Suite
 
-1. **Installer Python 3.9+**
-2. **Installer les dépendances** :
-   ```bash
-   pip install streamlit pyabf numpy matplotlib scipy pandas seaborn
+
+
+🇫🇷 VERSION FRANÇAISE
+1. Introduction Scientifique
+
+L'analyse des courants post-synaptiques inhibiteurs spontanés (sIPSC) est fondamentale pour décrypter le tonus GABAergique et la balance excitation/inhibition au sein des réseaux neuronaux (notamment dans les modèles FXS ou Reeler).
+
+Cependant, les méthodes classiques de détection par seuil souffrent du bruit électrique stochastique et des biais de l'opérateur, menaçant la reproductibilité. Cette application Streamlit opère comme une station de travail experte utilisant un algorithme avancé de Template Matching Itératif. Elle crée une "empreinte" cellulaire parfaite et sans bruit pour détecter les événements GABA$_A$, et extrait mathématiquement la charge synaptique exacte.
+2. Fonctionnalités Principales
+
+    Polarité Adaptative (Entrant/Sortant) : S'adapte automatiquement à la force électromotrice du chlore (Vm​−ECl​), que vous enregistriez des courants sortants (ex: à 0 mV) ou entrants (ex: à −70 mV avec haut chlore intracellulaire).
+
+    Passe 1 (Création de l'Empreinte) : Scanne la trace avec de longs gabarits de décroissance (5,10,20,30 ms) pour capturer les cinétiques lentes du GABA$_A$. Les événements les plus nets sont alignés (Biological Snapping) et moyennés pour construire l'empreinte parfaite de la cellule.
+
+    Passe 2 (Détection Itérative & Mise à l'échelle) : L'empreinte glisse sur la trace via un Z-Score robuste. Les événements détectés sont analysés par la méthode des Moindres Carrés, isolant l'amplitude quantique réelle du bruit de fond.
+
+    Analyse du Filtrage Dendritique : Calcule le temps de montée 10-90% (Rise Time) par interpolation linéaire pour estimer la localisation synaptique et l'atténuation du signal.
+
+    Double Export : Exporte les événements bruts (Passe 1) et itératifs (Passe 2) avec leur fréquence, amplitude et charge synaptique, prêts pour les analyses statistiques de haut niveau.
+
+3. Algorithmes et Mathématiques
+Mise à l'Échelle par Moindres Carrés & Charge Synaptique
+
+Au lieu de lire la hauteur brute du pic (très vulnérable au bruit stochastique du patch-clamp), l'algorithme met à l'échelle l'empreinte cellulaire parfaite (le Gabarit) pour qu'elle épouse au mieux chaque événement.
+
+Le facteur d'échelle (s) est calculé via le produit scalaire (Moindres Carrés) :
+s=∑(Gabarit2)∑(Signal×Gabarit)​
+
+Ce facteur s devient l'Amplitude Scaled (mise à l'échelle) véritable.
+L'aire du gabarit étant parfaitement définie, la Charge Synaptique (l'aire sous la courbe, reflétant le nombre exact de récepteurs GABA$A$ ouverts) est calculée de manière implacable :
+$$Charge{scaled} = s \times \int_{0}^{\infty} Gabarit(t) dt$$
+4. Guide d'Utilisation
+
+    Chargement : Uploadez votre fichier .abf.
+
+    Prétraitement : Sélectionnez la polarité du signal ("Entrant" ou "Sortant").
+
+    Seuils (Z-Score) : Ajustez le Z-Score robuste (typiquement entre 2.5 et 4.0) pour définir la rigueur de la détection.
+
+    Filtres Cinétiques : Appliquez des limites d'amplitude absolue ou de temps de montée pour exclure les artefacts.
+
+    Inspection Visuelle : Observez les graphiques de la double passe. Le panneau de droite affiche l'empreinte parfaite (Passe 1), tandis que celui de gauche superpose les détections itératives (Passe 2).
+
+    Exportation : Téléchargez les fichiers .csv contenant les distributions et les métriques des événements mis à l'échelle.
+
+5. Citation
+
+Si vous utilisez ce logiciel ou son architecture mathématique pour vos recherches, merci d'inclure la citation et le DOI suivants :
+
+    Manzoni Lab (2026). Expert Pipeline: sIPSC Iterative Template Matching.
+    DOI: 10.5281/zenodo.19920540
+    GitHub: github.com/OliManzoni/Manzoni_Chavis_Lab_Ephys_Suite
