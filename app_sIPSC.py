@@ -185,7 +185,7 @@ with col_title:
     st.markdown(f"*{T['subtitle']}*")
 
 # --- NOUVEAU DOI ---
-st.info(f"**DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19920540.svg)](https://doi.org/10.5281/zenodo.19920540) | **GitHub:** [{T['readme']}](https://github.com/OliManzoni/Manzoni_Chavis_Lab_Ephys_Suite/blob/main/README.md)")
+st.info(f"**DOI:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19920540.svg)](https://doi.org/10.5281/zenodo.19920540) | **GitHub:** [{T['readme']}](https://github.com/OliManzoni/Manzoni_Chavis_Lab_spontI/blob/main/README.md)")
 
 with st.expander(T["math_title"]):
     st.markdown(T["math_text"])
