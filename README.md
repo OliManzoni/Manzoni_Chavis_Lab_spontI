@@ -3,7 +3,8 @@ Manzoni & Chavis Labs | Synaptic Plasticity & Biophysics
 
 (Le README en français se trouve dans la seconde moitié de ce document / The French README is located in the second half of this document).
 
-👉 Online Access: https://manzonilab-sipsc.streamlit.app/ (Update with your actual link)
+👉 Online Access: https://manzonichavislabsponti.streamlit.app/
+
 🇬🇧 ENGLISH VERSION
 1. Scientific Introduction
 
@@ -53,7 +54,7 @@ If you use this software or its mathematical architecture in your research, plea
 
     Manzoni Lab (2026). Expert Pipeline: sIPSC Iterative Template Matching.
     DOI: 10.5281/zenodo.19920540
-    GitHub: github.com/OliManzoni/Manzoni_Chavis_Lab_Ephys_Suite
+    GitHub: https://github.com/OliManzoni/Manzoni_Chavis_Lab_spontI/tree/main
 
 
 
@@ -106,4 +107,4 @@ Si vous utilisez ce logiciel ou son architecture mathématique pour vos recherch
 
     Manzoni Lab (2026). Expert Pipeline: sIPSC Iterative Template Matching.
     DOI: 10.5281/zenodo.19920540
-    GitHub: github.com/OliManzoni/Manzoni_Chavis_Lab_Ephys_Suite
+    GitHub: https://github.com/OliManzoni/Manzoni_Chavis_Lab_spontI/tree/main
